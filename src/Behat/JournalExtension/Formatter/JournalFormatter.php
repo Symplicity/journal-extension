@@ -3,14 +3,10 @@
 namespace Behat\JournalExtension\Formatter;
 
 use Behat\Behat\DataCollector\LoggerDataCollector;
-use Behat\Behat\Definition\DefinitionInterface;
-use Behat\Behat\Formatter\HtmlFormatter;
-use Behat\Gherkin\Node\StepNode;
-use Behat\JournalExtension\Formatter\Driver\DriverInterface;
-use Behat\Mink\Mink;
 use Behat\Behat\Event\StepEvent;
+use Behat\Behat\Formatter\HtmlFormatter;
 use Behat\Gherkin\Node\TableNode;
-
+use Behat\JournalExtension\Formatter\Driver\DriverInterface;
 
 class JournalFormatter extends HtmlFormatter {
     protected $driver;
@@ -19,6 +15,9 @@ class JournalFormatter extends HtmlFormatter {
     protected $screenShotMarkup;
     protected $screenShotDirectory;
 
+    /**
+     * {@inheritdoc}
+     */
     public function __construct(DriverInterface $driver, $captureAll) {
         $this->driver = $driver;
         $this->captureAll = (bool)$captureAll;
@@ -55,16 +54,10 @@ class JournalFormatter extends HtmlFormatter {
 HTML
         );
         $this->writeln('</div>');
-
-
     }
 
     /**
-     * Listens to "step.after" event.
-     *
-     * @param StepEvent $event
-     *
-     * @uses printStep()
+     * {@inheritdoc}
      */
     public function afterStep(StepEvent $event) {
         static $last_screenshot;
@@ -92,42 +85,21 @@ HTML
                 $this->screenShotMarkup .= '</div>';
             }
         }
-        if ($this->inBackground && $this->isBackgroundPrinted) {
-            return;
-        }
 
-        if (!$this->inBackground && $this->inOutlineExample) {
-            $this->delayedStepEvents[] = $event;
+        parent::afterStep($event);
 
-            return;
-        }
-
-        $this->printStep(
-            $event->getStep(),
-            $event->getResult(),
-            $event->getDefinition(),
-            $event->getSnippet(),
-            $event->getException()
-        );
         $this->writeln($this->screenShotMarkup);
         $this->screenShotMarkup = '';
-
     }
 
 
     /**
      * {@inheritdoc}
-     * @param TableNode $examples
-     * @param int $iteration
-     * @param int $result
-     * @param bool $isSkipped
      */
     protected function printOutlineExampleResult(TableNode $examples, $iteration, $result, $isSkipped) {
+        parent::printOutlineExampleResult($examples, $iteration, $result, $isSkipped);
         if (!$this->getParameter('expand')) {
             $color = $this->getResultColorCode($result);
-            $this->printColorizedTableRow($examples->getRow($iteration + 1), $color);
-
-            $this->printOutlineExampleResultExceptions($examples, $this->delayedStepEvents);
             $this->writeln('<tr class="' . $color . '">');
             $this->writeln('<td>' . ($iteration + 1) . '</td>');
             $this->writeln('<td colspan="' . count($examples->getRow($iteration)) . '">');
@@ -138,30 +110,11 @@ HTML
             $this->writeln('</td>');
             $this->writeln('</tr>');
             $this->screenShotMarkup = '';
-        } else {
-            $this->write('<h4>' . $examples->getKeyword() . ': ');
-            foreach ($examples->getRow($iteration + 1) as $value) {
-                $this->write('<span>' . $value . '</span>');
-            }
-            $this->writeln('</h4>');
-
-            foreach ($this->delayedStepEvents as $event) {
-                $this->writeln('<ol>');
-                $this->printStep(
-                    $event->getStep(),
-                    $event->getResult(),
-                    $event->getDefinition(),
-                    $event->getSnippet(),
-                    $event->getException()
-                );
-                $this->writeln('</ol>');
-            }
         }
     }
 
     /**
      * {@inheritdoc}
-     * @return string
      */
     protected function getHtmlTemplateScript() {
         $result = parent::getHtmlTemplateScript();
@@ -193,7 +146,6 @@ JS;
 
     /**
      * {@inheritdoc}
-     * @return string
      */
     protected function getHtmlTemplateStyle() {
         $result = parent::getHtmlTemplateStyle();
